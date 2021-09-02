@@ -1,0 +1,3 @@
+fn main() {}
+
+struct S { i64, bool };

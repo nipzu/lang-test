@@ -1,0 +1,16 @@
+fn main() {
+    print("Hello, world!");
+}
+
+struct S {
+    val1: i64,
+    val2: u16,
+}
+
+fn foo(a: i64) -> i64 {
+    b := 23;
+    mut a := 12 + b;
+    a = a + 1;
+    mut s := "Hello";
+    return a;
+}
