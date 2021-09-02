@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::lazy::SyncLazy;
 use std::str::Chars;
 
-const OTHER_TOKENS: [(&[char], TokenKind); 21] = [
+const OTHER_TOKENS: [(&[char], TokenKind); 23] = [
     (&['{'], TokenKind::OpenBraces),
     (&['}'], TokenKind::CloseBraces),
     (&['('], TokenKind::OpenParentheses),
@@ -14,6 +14,8 @@ const OTHER_TOKENS: [(&[char], TokenKind); 21] = [
     (&['/'], TokenKind::Div),
     (&['%'], TokenKind::Rem),
     (&['='], TokenKind::Assign),
+    (&[':', '='], TokenKind::DefineVar),
+    (&[':'], TokenKind::FieldTypeSeparator),
     (&['=', '='], TokenKind::Equal),
     (&['>'], TokenKind::Greater),
     (&['>', '='], TokenKind::GreaterOrEqual),

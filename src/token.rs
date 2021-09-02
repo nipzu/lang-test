@@ -45,6 +45,8 @@ pub enum TokenKind {
     Div,
     Rem,
     Assign,
+    DefineVar,
+    FieldTypeSeparator,
     Equal,
     Greater,
     GreaterOrEqual,
@@ -64,6 +66,7 @@ pub enum TokenKind {
 // TODO: is this even ever used?
 impl fmt::Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut tmp = String::new();
         let s = match self {
             TokenKind::OpenBraces => "{",
             TokenKind::CloseBraces => "}",
@@ -83,13 +86,20 @@ impl fmt::Display for TokenKind {
             TokenKind::FunctionDefinition => "fn",
             TokenKind::Mutable => "mut",
             TokenKind::Struct => "struct",
+            TokenKind::DefineVar => ":=",
+            TokenKind::FieldTypeSeparator => ":",
             TokenKind::Not => "!",
             TokenKind::Or => "|",
             TokenKind::And => "&",
             TokenKind::Xor => "^",
             TokenKind::Comma => ",",
             TokenKind::EndOfStatement => ";",
-            TokenKind::StringLiteral(_) => unimplemented!(),
+            TokenKind::StringLiteral(literal) => {
+                tmp.push('"');
+                tmp.push_str(literal);
+                tmp.push('"');
+                &tmp
+            }
             TokenKind::Identifier(id_string) => id_string,
             TokenKind::IntegerLiteral(literal) => literal,
         };

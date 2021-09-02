@@ -1,20 +1,25 @@
 #![feature(once_cell)]
 
 mod ast;
-mod tokenizer;
 mod token;
+mod tokenizer;
 
 use tokenizer::{TokenizingError, TokenizingErrorKind};
 
 fn main() {
     let contents = include_str!("../example.txt");
     match tokenizer::tokenize_text(contents) {
-        Ok(tokens) => println!("{:#?}", tokens),
+        Ok(tokens) => {
+            println!("{:#?}", tokens);
+            tokens
+                .iter()
+                .map(token::Token::kind)
+                .for_each(|t| print!("{} ", t));
+            println!();
+        }
         Err(e) => print_tokenizing_error(contents, &e),
     };
 }
-
-fn try_compile(contents: &str) -> Result<(), ()> {Ok(())}
 
 fn print_tokenizing_error(contents: &str, error: &TokenizingError) {
     let line = contents
