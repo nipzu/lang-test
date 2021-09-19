@@ -32,9 +32,9 @@ pub struct Location {
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
-    StringLiteral(String),
-    IntegerLiteral(String),
-    Identifier(String),
+    StringLiteral,
+    IntegerLiteral,
+    Identifier,
     OpenBraces,
     CloseBraces,
     OpenParentheses,
@@ -66,7 +66,6 @@ pub enum TokenKind {
 // TODO: is this even ever used?
 impl fmt::Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut tmp = String::new();
         let s = match self {
             TokenKind::OpenBraces => "{",
             TokenKind::CloseBraces => "}",
@@ -94,14 +93,9 @@ impl fmt::Display for TokenKind {
             TokenKind::Xor => "^",
             TokenKind::Comma => ",",
             TokenKind::EndOfStatement => ";",
-            TokenKind::StringLiteral(literal) => {
-                tmp.push('"');
-                tmp.push_str(literal);
-                tmp.push('"');
-                &tmp
-            }
-            TokenKind::Identifier(id_string) => id_string,
-            TokenKind::IntegerLiteral(literal) => literal,
+            TokenKind::StringLiteral => todo!(),
+            TokenKind::Identifier => todo!(),
+            TokenKind::IntegerLiteral => todo!(),
         };
         write!(f, "{}", s)
     }

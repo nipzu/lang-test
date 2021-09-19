@@ -8,7 +8,8 @@ use tokenizer::{TokenizingError, TokenizingErrorKind};
 
 fn main() {
     let contents = include_str!("../example.txt");
-    match tokenizer::tokenize_text(contents) {
+    println!("{}", contents);
+    match tokenizer::tokenize_contents(contents) {
         Ok(tokens) => {
             println!("{:#?}", tokens);
             tokens
@@ -24,14 +25,14 @@ fn main() {
 fn print_tokenizing_error(contents: &str, error: &TokenizingError) {
     let line = contents
         .lines()
-        .nth(error.location.line)
+        .nth(error.location.line - 1)
         .expect("ICE: error on non-existing line");
 
     let message = match error.kind {
         TokenizingErrorKind::InvalidEscape => format!(
             "invalid escape character {} at column {} on line {}",
             line.chars()
-                .nth(error.location.column)
+                .nth(error.location.column - 1)
                 .expect("ICE: error at non-existing column"),
             error.location.line,
             error.location.column
