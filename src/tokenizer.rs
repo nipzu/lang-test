@@ -265,7 +265,6 @@ fn tokenize_other_token(chars: &mut CharLocationScanner) -> Option<TokenKind> {
     cur_candidate
 }
 
-// TODO
 #[derive(Debug)]
 pub struct TokenizingError {
     pub location: Location,

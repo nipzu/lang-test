@@ -1,5 +1,3 @@
-use std::iter::Peekable;
-
 use crate::token::{Token, TokenKind};
 use crate::tokenizer::LiteralData;
 
@@ -49,7 +47,7 @@ fn parse_function(
 }
 
 fn parse_struct(
-    tokens: &mut Peekable<impl Iterator<Item = Token>>,
+    tokens: &mut impl Iterator<Item = Token>,
     literal_data: &LiteralData,
 ) -> Result<Structure, ParseError> {
     let struct_name = expect_identifier(tokens, literal_data)?;
@@ -57,16 +55,19 @@ fn parse_struct(
     let mut fields = Vec::new();
 
     expect_token(tokens, TokenKind::OpenBraces)?;
-    while tokens
-        .peek()
-        .map_or(false, |t| t.kind() == TokenKind::Identifier)
-    {
+    loop {
         let field_name = expect_identifier(tokens, literal_data)?;
         expect_token(tokens, TokenKind::FieldTypeSeparator)?;
         let field_type = expect_identifier(tokens, literal_data)?;
         fields.push((field_name.clone(), field_type.clone()));
+
+        let next_token = tokens.next();
+        match next_token.as_ref().map(Token::kind) {
+            Some(TokenKind::Comma) => continue,
+            Some(TokenKind::CloseBraces) => break,
+            _ => err_expected(next_token, &[TokenKind::Comma, TokenKind::CloseBraces])?,
+        }
     }
-    expect_token(tokens, TokenKind::CloseBraces)?;
 
     Ok(Structure {
         name: struct_name.clone(),
@@ -86,6 +87,7 @@ struct Function {
 
 struct Statement {}
 
+// TODO: this could probably be used with the `?` in the future
 fn err_expected(token: Option<Token>, expected: &[TokenKind]) -> Result<!, ParseError> {
     Err(ParseError {
         token,
