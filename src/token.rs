@@ -59,6 +59,7 @@ pub enum TokenKind {
     Xor,
     Comma,
     EndOfStatement,
+    RightArrow,
 }
 
 /*

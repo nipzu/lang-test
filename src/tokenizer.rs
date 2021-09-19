@@ -1,11 +1,12 @@
-use crate::token::{Location, Token, TokenKind};
 use std::collections::HashMap;
 use std::lazy::SyncLazy;
 use std::str::Chars;
 
 use unicode_xid::UnicodeXID;
 
-const OTHER_TOKENS: [(&[char], TokenKind); 23] = [
+use crate::token::{Location, Token, TokenKind};
+
+const OTHER_TOKENS: [(&[char], TokenKind); 24] = [
     (&['{'], TokenKind::OpenBraces),
     (&['}'], TokenKind::CloseBraces),
     (&['('], TokenKind::OpenParentheses),
@@ -16,9 +17,9 @@ const OTHER_TOKENS: [(&[char], TokenKind); 23] = [
     (&['/'], TokenKind::Div),
     (&['%'], TokenKind::Rem),
     (&['='], TokenKind::Assign),
-    (&[':', '='], TokenKind::DefineVar),
-    (&[':'], TokenKind::FieldTypeSeparator),
     (&['=', '='], TokenKind::Equal),
+    (&[':'], TokenKind::FieldTypeSeparator),
+    (&[':', '='], TokenKind::DefineVar),
     (&['>'], TokenKind::Greater),
     (&['>', '='], TokenKind::GreaterOrEqual),
     (&['<'], TokenKind::Less),
@@ -29,6 +30,7 @@ const OTHER_TOKENS: [(&[char], TokenKind); 23] = [
     (&['^'], TokenKind::Xor),
     (&[','], TokenKind::Comma),
     (&[';'], TokenKind::EndOfStatement),
+    (&['-', '>'], TokenKind::RightArrow),
 ];
 
 static TOKEN_MAP: SyncLazy<HashMap<&[char], Option<TokenKind>>> = SyncLazy::new(|| {
@@ -290,6 +292,23 @@ mod tests {
             TokenKind::Comma,
             TokenKind::Identifier,
             TokenKind::Not,
+        ];
+
+        assert!(tokenize_text(input)
+            .unwrap()
+            .0
+            .iter()
+            .map(Token::kind)
+            .eq(output.into_iter()));
+    }
+
+    #[test]
+    fn test3() {
+        let input = "=:=:=";
+        let output = vec![
+            TokenKind::Assign,
+            TokenKind::DefineVar,
+            TokenKind::DefineVar,
         ];
 
         assert!(tokenize_text(input)

@@ -14,6 +14,7 @@ fn main() {
         Ok((tokens, literal_data)) => {
             println!("{:#?}", tokens);
             let program = Program::from_tokens(tokens, literal_data);
+            println!("{:#?}", program);
         }
         Err(e) => print_tokenizing_error(contents, &e),
     };
