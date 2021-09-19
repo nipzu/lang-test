@@ -2,6 +2,7 @@ fn main() {
     print("Hello, world!");
 }
 
+# this is a comment
 struct S {
     val1: i64,
     val2: u16,

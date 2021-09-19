@@ -4,18 +4,15 @@ mod ast;
 mod token;
 mod tokenizer;
 
+use ast::Program;
 use tokenizer::{TokenizingError, TokenizingErrorKind};
 
 fn main() {
     let contents = include_str!("../example.txt");
     match tokenizer::tokenize_text(contents) {
-        Ok(tokens) => {
+        Ok((tokens, literal_data)) => {
             println!("{:#?}", tokens);
-            tokens
-                .iter()
-                .map(token::Token::kind)
-                .for_each(|t| print!("{} ", t));
-            println!();
+            let _program = Program::from_tokens(tokens.into_iter(), &literal_data);
         }
         Err(e) => print_tokenizing_error(contents, &e),
     };

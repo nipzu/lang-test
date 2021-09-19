@@ -1,5 +1,3 @@
-use std::fmt;
-
 #[derive(Debug)]
 pub struct Token {
     token_kind: TokenKind,
@@ -23,7 +21,7 @@ impl Token {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Location {
     pub line: usize,
     pub column: usize,
@@ -32,9 +30,9 @@ pub struct Location {
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
-    StringLiteral(String),
-    IntegerLiteral(String),
-    Identifier(String),
+    StringLiteral,
+    IntegerLiteral,
+    Identifier,
     OpenBraces,
     CloseBraces,
     OpenParentheses,
@@ -63,6 +61,7 @@ pub enum TokenKind {
     EndOfStatement,
 }
 
+/*
 // TODO: is this even ever used?
 impl fmt::Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -106,3 +105,4 @@ impl fmt::Display for TokenKind {
         write!(f, "{}", s)
     }
 }
+*/
