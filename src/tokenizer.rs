@@ -40,6 +40,32 @@ static TOKEN_MAP: SyncLazy<HashMap<&[char], Option<TokenKind>>> = SyncLazy::new(
     token_map
 });
 
+pub struct LiteralData {
+    identifiers: HashMap<Location, String>,
+    integer_literals: HashMap<Location, String>,
+    string_literals: HashMap<Location, String>,
+}
+
+impl LiteralData {
+    pub fn try_get_identifier(&self, token: &Token) -> Option<&String> {
+        (*token.kind() == TokenKind::Identifier)
+            .then(|| self.identifiers.get(token.location()))
+            .flatten()
+    }
+
+    pub fn try_get_string_literal(&self, token: &Token) -> Option<&String> {
+        (*token.kind() == TokenKind::StringLiteral)
+            .then(|| self.string_literals.get(token.location()))
+            .flatten()
+    }
+
+    pub fn try_get_integer_literal(&self, token: &Token) -> Option<&String> {
+        (*token.kind() == TokenKind::IntegerLiteral)
+            .then(|| self.integer_literals.get(token.location()))
+            .flatten()
+    }
+}
+
 #[derive(Clone)]
 struct CharLocationScanner<'a> {
     cur_location: Location,
@@ -79,9 +105,12 @@ impl<'a> CharLocationScanner<'a> {
     }
 }
 
-pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, TokenizingError> {
+pub fn tokenize_text(contents: &str) -> Result<(Vec<Token>, LiteralData), TokenizingError> {
     let mut chars = CharLocationScanner::new(contents);
     let mut tokens = Vec::new();
+    let mut identifiers = HashMap::new();
+    let mut string_literals = HashMap::new();
+    let mut integer_literals = HashMap::new();
 
     while let Some((c, location)) = chars.current_char_and_location() {
         tokens.push(Token::new(
@@ -90,18 +119,33 @@ pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, TokenizingError> 
                     chars.advance();
                     continue;
                 }
-                'a'..='z' | 'A'..='Z' | '_' => match tokenize_identifier(&mut chars).as_str() {
-                    "fn" => TokenKind::FunctionDefinition,
-                    "mut" => TokenKind::Mutable,
-                    "struct" => TokenKind::Struct,
-                    _ => TokenKind::Identifier,
-                },
+                '#' => {
+                    while let Some(c) = chars.current_char() {
+                        chars.advance();
+                        if c == '\n' {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    let s = tokenize_identifier_or_keyword(&mut chars);
+                    match s.as_str() {
+                        "fn" => TokenKind::FunctionDefinition,
+                        "mut" => TokenKind::Mutable,
+                        "struct" => TokenKind::Struct,
+                        _ => {
+                            identifiers.insert(location, s);
+                            TokenKind::Identifier
+                        }
+                    }
+                }
                 '0'..='9' => {
-                    tokenize_integer(&mut chars)?;
+                    integer_literals.insert(location, tokenize_integer(&mut chars)?);
                     TokenKind::IntegerLiteral
                 }
                 '"' => {
-                    tokenize_string(&mut chars)?;
+                    string_literals.insert(location, tokenize_string(&mut chars)?);
                     TokenKind::StringLiteral
                 }
                 _ => tokenize_other_token(&mut chars).ok_or(TokenizingError {
@@ -113,11 +157,17 @@ pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, TokenizingError> 
         ));
     }
 
-    Ok(tokens)
+    let literal_data = LiteralData {
+        identifiers,
+        string_literals,
+        integer_literals,
+    };
+
+    Ok((tokens, literal_data))
 }
 
 // first char should be an ascii letter or underscore
-fn tokenize_identifier(chars: &mut CharLocationScanner) -> String {
+fn tokenize_identifier_or_keyword(chars: &mut CharLocationScanner) -> String {
     assert!(matches!(
         chars.current_char(),
         Some('A'..='Z' | 'a'..='z' | '_')
@@ -188,7 +238,6 @@ fn tokenize_string(chars: &mut CharLocationScanner) -> Result<String, Tokenizing
         });
         chars.advance();
     }
-
     Ok(string)
 }
 
@@ -244,8 +293,9 @@ mod tests {
             TokenKind::Not,
         ];
 
-        assert!(tokenize_contents(input)
+        assert!(tokenize_text(input)
             .unwrap()
+            .0
             .iter()
             .map(Token::kind)
             .eq(output.iter()));
@@ -255,24 +305,24 @@ mod tests {
     fn test2() {
         let input = "=:=";
 
-        assert!(tokenize_contents(input).is_ok());
+        assert!(tokenize_text(input).is_ok());
     }
 
     #[test]
     fn test_new_line_between() {
         let input1 = "=\n=";
         let expected_output1 = &[&TokenKind::Assign, &TokenKind::Assign];
-        let output1 = tokenize_contents(input1).unwrap();
+        let output1 = tokenize_text(input1).unwrap();
         assert_eq!(
-            output1.iter().map(Token::kind).collect::<Vec<_>>(),
+            output1.0.iter().map(Token::kind).collect::<Vec<_>>(),
             expected_output1
         );
 
         let input2 = "first\nsecond";
         let expected_output2 = &[&TokenKind::Identifier, &TokenKind::Identifier];
-        let output2 = tokenize_contents(input2).unwrap();
+        let output2 = tokenize_text(input2).unwrap();
         assert_eq!(
-            output2.iter().map(Token::kind).collect::<Vec<_>>(),
+            output2.0.iter().map(Token::kind).collect::<Vec<_>>(),
             expected_output2
         );
     }

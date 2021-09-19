@@ -1,4 +1,5 @@
 use crate::token::{Token, TokenKind};
+use crate::tokenizer::LiteralData;
 
 pub struct Program {
     functions: Vec<Function>,
@@ -14,15 +15,20 @@ pub struct ParseError {
 }
 
 impl Program {
-    pub fn from_tokens(mut tokens: impl Iterator<Item = Token>) -> Result<Self, ParseError> {
+    pub fn from_tokens(
+        mut tokens: impl Iterator<Item = Token>,
+        literal_data: &LiteralData,
+    ) -> Result<Self, ParseError> {
         let mut functions = Vec::new();
         let mut structs = Vec::new();
 
         let t = tokens.next();
 
         match t.as_ref().map(Token::kind) {
-            Some(TokenKind::FunctionDefinition) => functions.push(parse_function(&mut tokens)?),
-            Some(TokenKind::Struct) => structs.push(parse_struct(&mut tokens)?),
+            Some(TokenKind::FunctionDefinition) => {
+                functions.push(parse_function(&mut tokens, &literal_data)?)
+            }
+            Some(TokenKind::Struct) => structs.push(parse_struct(&mut tokens, &literal_data)?),
             None => (),
             _ => {
                 return Err(ParseError {
@@ -35,23 +41,33 @@ impl Program {
     }
 }
 
-fn parse_function(tokens: &mut impl Iterator<Item = Token>) -> Result<Function, ParseError> {
+fn parse_function(
+    tokens: &mut impl Iterator<Item = Token>,
+    literal_data: &LiteralData,
+) -> Result<Function, ParseError> {
     todo!()
 }
 
-fn parse_struct(tokens: &mut impl Iterator<Item = Token>) -> Result<Structure, ParseError> {
-    // let struct_name_token = tokens.next();
+fn parse_struct(
+    tokens: &mut impl Iterator<Item = Token>,
+    literal_data: &LiteralData,
+) -> Result<Structure, ParseError> {
+    let struct_name = if let Some(name) = tokens
+        .next()
+        .map(|t| literal_data.try_get_identifier(&t))
+        .flatten()
+    {
+        name
+    } else {
+        return Err(ParseError {
+            expected: vec![TokenKind::Identifier],
+        });
+    };
 
-    // let struct_name =
-    //     if let Some(TokenKind::Identifier(ident)) = struct_name_token.as_ref().map(Token::kind) {
-    //         ident
-    //     } else {
-    //         return Err(ParseError {
-    //             expected: vec![TokenKind::Identifier(String::new())],
-    //         });
-    //     };
-
-    todo!()
+    Ok(Structure {
+        name: struct_name.clone(),
+        fields: Vec::new(),
+    })
 }
 
 struct Structure {

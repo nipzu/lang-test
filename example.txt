@@ -3,6 +3,7 @@ fn main() {
     y̆es
 }
 
+# this is a comment
 struct S {
     val1: i64,
     val2: u16,
