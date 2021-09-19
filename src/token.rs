@@ -12,12 +12,12 @@ impl Token {
         }
     }
 
-    pub const fn kind(&self) -> &TokenKind {
-        &self.token_kind
+    pub const fn kind(&self) -> TokenKind {
+        self.token_kind
     }
 
-    pub const fn location(&self) -> &Location {
-        &self.location
+    pub const fn location(&self) -> Location {
+        self.location
     }
 }
 
@@ -28,7 +28,7 @@ pub struct Location {
 }
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TokenKind {
     StringLiteral,
     IntegerLiteral,

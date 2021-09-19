@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use std::lazy::SyncLazy;
 use std::str::Chars;
 
+use unicode_xid::UnicodeXID;
+
 const OTHER_TOKENS: [(&[char], TokenKind); 23] = [
     (&['{'], TokenKind::OpenBraces),
     (&['}'], TokenKind::CloseBraces),
@@ -48,20 +50,20 @@ pub struct LiteralData {
 
 impl LiteralData {
     pub fn try_get_identifier(&self, token: &Token) -> Option<&String> {
-        (*token.kind() == TokenKind::Identifier)
-            .then(|| self.identifiers.get(token.location()))
-            .flatten()
-    }
-
-    pub fn try_get_string_literal(&self, token: &Token) -> Option<&String> {
-        (*token.kind() == TokenKind::StringLiteral)
-            .then(|| self.string_literals.get(token.location()))
+        (token.kind() == TokenKind::Identifier)
+            .then(|| self.identifiers.get(&token.location()))
             .flatten()
     }
 
     pub fn try_get_integer_literal(&self, token: &Token) -> Option<&String> {
-        (*token.kind() == TokenKind::IntegerLiteral)
-            .then(|| self.integer_literals.get(token.location()))
+        (token.kind() == TokenKind::IntegerLiteral)
+            .then(|| self.integer_literals.get(&token.location()))
+            .flatten()
+    }
+
+    pub fn try_get_string_literal(&self, token: &Token) -> Option<&String> {
+        (token.kind() == TokenKind::StringLiteral)
+            .then(|| self.string_literals.get(&token.location()))
             .flatten()
     }
 }
@@ -113,69 +115,67 @@ pub fn tokenize_text(contents: &str) -> Result<(Vec<Token>, LiteralData), Tokeni
     let mut integer_literals = HashMap::new();
 
     while let Some((c, location)) = chars.current_char_and_location() {
-        tokens.push(Token::new(
-            match c {
-                _ if c.is_whitespace() => {
+        let token_kind = match c {
+            _ if c.is_whitespace() => {
+                chars.advance();
+                continue;
+            }
+            '#' => {
+                while let Some(c) = chars.current_char() {
                     chars.advance();
-                    continue;
-                }
-                '#' => {
-                    while let Some(c) = chars.current_char() {
-                        chars.advance();
-                        if c == '\n' {
-                            break;
-                        }
-                    }
-                    continue;
-                }
-                'a'..='z' | 'A'..='Z' | '_' => {
-                    let s = tokenize_identifier_or_keyword(&mut chars);
-                    match s.as_str() {
-                        "fn" => TokenKind::FunctionDefinition,
-                        "mut" => TokenKind::Mutable,
-                        "struct" => TokenKind::Struct,
-                        _ => {
-                            identifiers.insert(location, s);
-                            TokenKind::Identifier
-                        }
+                    if c == '\n' {
+                        break;
                     }
                 }
-                '0'..='9' => {
-                    integer_literals.insert(location, tokenize_integer(&mut chars)?);
-                    TokenKind::IntegerLiteral
+                continue;
+            }
+            _ if c.is_xid_start() => {
+                let s = tokenize_identifier_or_keyword(&mut chars);
+                match s.as_str() {
+                    "fn" => TokenKind::FunctionDefinition,
+                    "mut" => TokenKind::Mutable,
+                    "struct" => TokenKind::Struct,
+                    _ => {
+                        identifiers.insert(location, s);
+                        TokenKind::Identifier
+                    }
                 }
-                '"' => {
-                    string_literals.insert(location, tokenize_string(&mut chars)?);
-                    TokenKind::StringLiteral
-                }
-                _ => tokenize_other_token(&mut chars).ok_or(TokenizingError {
-                    location,
-                    kind: TokenizingErrorKind::UnknownToken,
-                })?,
-            },
-            location,
-        ));
+            }
+            '0'..='9' => {
+                integer_literals.insert(location, tokenize_integer(&mut chars)?);
+                TokenKind::IntegerLiteral
+            }
+            '"' => {
+                string_literals.insert(location, tokenize_string(&mut chars)?);
+                TokenKind::StringLiteral
+            }
+            _ => tokenize_other_token(&mut chars).ok_or(TokenizingError {
+                location,
+                kind: TokenizingErrorKind::UnknownToken,
+            })?,
+        };
+
+        tokens.push(Token::new(token_kind, location));
     }
 
     let literal_data = LiteralData {
         identifiers,
-        string_literals,
         integer_literals,
+        string_literals,
     };
 
     Ok((tokens, literal_data))
 }
 
-// first char should be an ascii letter or underscore
 fn tokenize_identifier_or_keyword(chars: &mut CharLocationScanner) -> String {
-    assert!(matches!(
-        chars.current_char(),
-        Some('A'..='Z' | 'a'..='z' | '_')
-    ));
-
+    // xid_start is a subset of xid_continue, so we don't need special treatment
+    // for the first character
     let mut token_chars = String::new();
-    while let Some(c @ ('A'..='Z' | 'a'..='z' | '0'..='9' | '_')) = chars.current_char() {
-        token_chars.push(c);
+    while chars
+        .current_char()
+        .map_or(false, UnicodeXID::is_xid_continue)
+    {
+        token_chars.push(chars.current_char().unwrap());
         chars.advance();
     }
 
@@ -248,7 +248,7 @@ fn tokenize_other_token(chars: &mut CharLocationScanner) -> Option<TokenKind> {
     let mut continue_chars = chars.clone();
     while let Some(entry) = TOKEN_MAP.get(&cur_chars[..]) {
         if let Some(new_candidate) = entry {
-            cur_candidate = Some(new_candidate.clone());
+            cur_candidate = Some(*new_candidate);
             continue_chars = chars.clone();
         }
 
@@ -298,7 +298,7 @@ mod tests {
             .0
             .iter()
             .map(Token::kind)
-            .eq(output.iter()));
+            .eq(output.into_iter()));
     }
 
     #[test]
@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn test_new_line_between() {
         let input1 = "=\n=";
-        let expected_output1 = &[&TokenKind::Assign, &TokenKind::Assign];
+        let expected_output1 = &[TokenKind::Assign, TokenKind::Assign];
         let output1 = tokenize_text(input1).unwrap();
         assert_eq!(
             output1.0.iter().map(Token::kind).collect::<Vec<_>>(),
@@ -319,7 +319,7 @@ mod tests {
         );
 
         let input2 = "first\nsecond";
-        let expected_output2 = &[&TokenKind::Identifier, &TokenKind::Identifier];
+        let expected_output2 = &[TokenKind::Identifier, TokenKind::Identifier];
         let output2 = tokenize_text(input2).unwrap();
         assert_eq!(
             output2.0.iter().map(Token::kind).collect::<Vec<_>>(),

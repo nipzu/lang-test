@@ -1,4 +1,5 @@
 #![feature(once_cell)]
+#![feature(never_type)]
 
 mod ast;
 mod token;
@@ -12,7 +13,7 @@ fn main() {
     match tokenizer::tokenize_text(contents) {
         Ok((tokens, literal_data)) => {
             println!("{:#?}", tokens);
-            let _program = Program::from_tokens(tokens.into_iter(), &literal_data);
+            let program = Program::from_tokens(tokens, literal_data);
         }
         Err(e) => print_tokenizing_error(contents, &e),
     };
